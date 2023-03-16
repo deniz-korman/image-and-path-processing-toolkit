@@ -1,0 +1,30 @@
+trial:
+  # File Paths
+  image_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\data\\images\\Habro1_gap45_gain20_1_B"
+  flat_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\data\\images\\flats\\all\\Flats_and_Darks\\Flats_gap45_gain20"
+  output_name: "bilat_vid.mp4"
+
+  # Video Settings
+  vid_start_index: 1000
+  num_images: 400
+  video_stride: 2
+  convert_to_gray: False
+  crop: [
+    [500,-1],
+    [800,-1]
+  ]
+
+  # Pipeline Stages
+  pipeline:
+    [
+      {
+        name: mean_divide_video,
+        params: [10],
+        kwargs: {}
+      },
+      {
+        name: temporal_bilateral_filter,
+        kwargs: {},
+        params: []
+      }
+    ]
