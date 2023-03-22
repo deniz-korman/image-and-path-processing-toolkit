@@ -1,7 +1,7 @@
 # File Paths
 image_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\data\\images\\Habro1_gap45_gain20_1_B"
 flat_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\data\\images\\flats\\all\\Flats_and_Darks\\Flats_gap45_gain20"
-output_name: "bilat_vid"
+output_name: "lap_contrast"
 
 # Video Settings
 vid_start_index: 1000
@@ -17,13 +17,22 @@ crop: [
 pipeline:
   [
     {
+      # Name of method
       name: mean_divide_video,
-      params: [10],
+      # Any positional arguments (for example blur takes a argument for the size of the blur kernel)
+      params:
+        [10],
+      # keyword arguments
       kwargs: {}
     },
     {
-      name: temporal_bilateral_filter,
-      kwargs: {},
-      params: []
-    }
+      name: std_normalize,
+      params: [3],
+      kwargs: {}
+    },
+    {
+      name: normalize,
+      params: [255],
+      kwargs: {}
+    },
   ]

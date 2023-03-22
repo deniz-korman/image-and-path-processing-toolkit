@@ -1,57 +1,66 @@
-trial:
-  # File Paths
-  image_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\data\\images\\Habro1_gap45_gain20_1_B"
-  flat_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\data\\images\\flats\\all\\Flats_and_Darks\\Flats_gap45_gain20"
-  output_name: "med_blur.mp4"
+# File Paths
+image_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\data\\images\\Habro1_gap45_gain20_1_B"
+flat_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\data\\images\\flats\\all\\Flats_and_Darks\\Flats_gap45_gain20"
+output_name: "med_blur"
 
-  # Video Settings
-    # start of video
-  vid_start_index: 1000
-    # number of frames to end at. stop = (start + num)
-  num_images: 1000
-    # stride of video, as in if set to 2 every other frame will be loaded
-  video_stride: 2
-    # if the video is 3 channel set this to true to convert to grayscale
-  convert_to_gray: False
-    # cropping settings for video (helps a lot with longer videos). Crop can be removed to not crop images
-  crop: [
-    # x-axis crop
-    [
-      # x-min (set to 0 for whole image)
-      500,
-      # x-max (set to -1 for whole image)
-      -1
-    ],
-    # y-axis crop
-    [
-      # y-min
-      800,
-      # y-max
-      -1
-    ]
+# Video Settings
+  # start of video
+vid_start_index: 1000
+  # number of frames to end at. stop = (start + num)
+num_images: 1000
+  # stride of video, as in if set to 2 every other frame will be loaded
+video_stride: 2
+  # if the video is 3 channel set this to true to convert to grayscale
+convert_to_gray: False
+  # cropping settings for video (helps a lot with longer videos). Crop can be removed to not crop images
+crop: [
+  # x-axis crop
+  [
+    # x-min (set to 0 for whole image)
+    500,
+    # x-max (set to -1 for whole image)
+    -1
+  ],
+  # y-axis crop
+  [
+    # y-min
+    800,
+    # y-max
+    -1
   ]
-  
-  # Pipeline Stages
-  pipeline:
-    [
-      # Stage 1
-      {
-        # Name of method
-        name: mean_divide_video,
-        # Any positional arguments (for example blur takes a argument for the size of the blur kernel)
-        params:
-          [10],
-        # keyword arguments
-        kwargs: {}
-      },
-      {
-        name: std_normalize,
-        params: [2],
-        kwargs: {}
-      }, 
-      {
-        name: mul,
-        params: [100],
-        kwargs: {}
-      }
-    ]
+]
+
+# Pipeline Stages
+pipeline:
+  [
+    # Stage 1
+    {
+      # Name of method
+      name: mean_divide_video,
+      # Any positional arguments (for example blur takes a argument for the size of the blur kernel)
+      params:
+        [10],
+      # keyword arguments
+      kwargs: {}
+    },
+    {
+      name: median_filter,
+      params: [2],
+      kwargs: {}
+    }, 
+    {
+      name: blur,
+      params: [3],
+      kwargs: {}
+    }, 
+    {
+      name: std_normalize,
+      params: [2],
+      kwargs: {}
+    }, 
+    {
+      name: mul,
+      params: [100],
+      kwargs: {}
+    }
+  ]

@@ -1,7 +1,7 @@
 import util
 import yaml
 import argparse
-
+import os
 
 single_funcs = [
     "cv_denoise",
@@ -23,7 +23,7 @@ single_funcs = [
 
 def main(conf):
     src = conf["image_folder"]
-    if conf["flat_folder"] is not None:
+    if conf["flat_folder"] != "None":
         flat_path = conf["flat_folder"]
     else:
         flat_path = None
@@ -56,7 +56,21 @@ def main(conf):
             vid = func(vid, *stage["params"], **stage["kwargs"])
 
     print("Writing video to: videos/", conf['output_name'])
-    util.write_video(vid, conf['output_name'])
+
+    files = os.listdir("videos")
+    if conf['output_name'] in files:
+        i = 0
+        new_name = conf['output_name'] + "_" + str(i)
+        while new_name in files:
+            i += 1
+            new_name = conf['output_name'] + "_" + str(i)
+        conf['output_name'] = new_name
+
+    save_folder = os.path.join("videos", conf['output_name'])
+    os.mkdir(save_folder)
+    util.write_video(vid, conf['output_name']+".mp4", save_folder)
+    yaml_file = open(os.path.join(save_folder, "config.yaml"), 'w')
+    yaml.dump(conf, yaml_file)
 
 
 
@@ -70,4 +84,4 @@ if __name__ == "__main__":
     with open(args.config, "r") as yamlfile:
         data = yaml.load(yamlfile, Loader=yaml.FullLoader)
     
-    main(data["trial"])
+    main(data)

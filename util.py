@@ -24,6 +24,7 @@ def get_vid(src, init, nframes, step=1, crop=((0,-1), (0,-1))):
     for i in tqdm(range(init, init + nframes, step)):
         img = plt.imread(os.path.join(src, files[i]))
         img = img[crop[0][0]:crop[0][1], crop[1][0]:crop[1][1]]
+        img = img.astype(np.float32, order='C')
         vid.append(img)
     vid = np.array(vid)
     return vid
@@ -95,16 +96,28 @@ def show(img, threshold=None):
     else:
         plt.imshow(img, cmap="gray")
         
+def frame_norm(vid):
+    for img in vid:
+        img -= img.min()
+        img /= img.max()
+    return vid
 
 def std_normalize(vid, stds=1):
     v_std = np.std(vid)
     v_mean = np.mean(vid)
 
-    v_max = v_mean + v_std * 2
-    v_min = v_mean - v_std * 2
+    v_max = v_mean + v_std * stds
+    v_min = v_mean - v_std * stds
 
-    vid = (vid-v_min)/(v_max-v_min)
+    vid[vid<v_min] = v_min
+    vid[vid>v_max] = v_max
+
+    vid = (vid-np.min(vid))/(np.max(vid) - np.min(vid))
     return vid
+
+def normalize(vid, max_val=1):
+    vid = (vid-np.min(vid))/(np.max(vid) - np.min(vid))
+    return vid * max_val
 
 def mul(vid, coef):
     return vid * coef
@@ -112,8 +125,8 @@ def mul(vid, coef):
 def exp(vid, factor):
     return vid ** factor
 
-def write_video(vid, name):
-    skvideo.io.vwrite(os.path.join("videos", name), vid)
+def write_video(vid, name, folder="videos"):
+    skvideo.io.vwrite(os.path.join(folder, name), vid)
 
 def process_video(vid, func, *args, **kwargs):
     frame_shape = np.array(func(vid[0], *args, **kwargs)).shape
