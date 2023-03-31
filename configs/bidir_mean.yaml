@@ -1,11 +1,11 @@
 # File Paths
 image_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\data\\images\\Habro1_gap45_gain20_1_B"
 flat_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\data\\images\\flats\\all\\Flats_and_Darks\\Flats_gap45_gain20"
-output_name: "mean_demo"
+output_name: "bidir"
 
 # Video Settings
 vid_start_index: 1000
-num_images: 400
+num_images: 500
 video_stride: 2
 convert_to_gray: False
 crop: [
@@ -18,10 +18,10 @@ pipeline:
   [
     {
       # Name of method
-      name: mean_divide_video,
+      name: mean_divide_video_bidir,
       # Any positional arguments (for example blur takes a argument for the size of the blur kernel)
       params:
-        [10],
+        [5, 5],
       # keyword arguments
       kwargs: {}
     },

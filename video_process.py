@@ -2,6 +2,7 @@ import util
 import yaml
 import argparse
 import os
+import numpy as np
 
 single_funcs = [
     "cv_denoise",
@@ -18,8 +19,44 @@ single_funcs = [
     "fourier_masker_vert",
     "fourier_masker_hor",
     "fourier_masker",
-    "fourier_masker_center"
+    "fourier_masker_center",
+    "block_match"
 ]
+
+def run_pipeline(pipeline, video):
+    vid=np.copy(video)
+    for stage in pipeline:
+        print("Running stage: ", stage['name'])
+        func = getattr(util, stage['name'])
+
+        if stage['name'] in single_funcs:
+            vid = util.process_video(vid, func, *stage["params"], **stage["kwargs"])
+        else:
+            vid = func(vid, *stage["params"], **stage["kwargs"])
+    return vid
+
+def write_vid(vids, name, conf):
+    print("Writing video to: videos/", name)
+
+    files = os.listdir("videos")
+    if name in files:
+        i = 0
+        new_name = name + "_" + str(i)
+        while new_name in files:
+            i += 1
+            new_name = name + "_" + str(i)
+        name = new_name
+
+    save_folder = os.path.join("videos", name)
+    os.mkdir(save_folder)
+    i = 0
+    for vid in vids:
+        util.write_video(vid, str(i) + "_" + name+".mp4", save_folder)
+        i+=1
+    yaml_file = open(os.path.join(save_folder, "config.yaml"), 'w')
+    yaml.dump(conf, yaml_file)
+
+    util.plt.imsave(os.path.join(save_folder, "thumbnail.png"), vid[len(vid)//2])
 
 def main(conf):
     src = conf["image_folder"]
@@ -46,42 +83,45 @@ def main(conf):
         vid = util.process_video(vid, util.np.min, axis=2)
 
 
-    for stage in conf['pipeline']:
-        print("Running stage: ", stage['name'])
-        func = getattr(util, stage['name'])
-
-        if stage['name'] in single_funcs:
-            vid = util.process_video(vid, func, *stage["params"], **stage["kwargs"])
-        else:
-            vid = func(vid, *stage["params"], **stage["kwargs"])
-
-    print("Writing video to: videos/", conf['output_name'])
-
-    files = os.listdir("videos")
-    if conf['output_name'] in files:
+    if "trials" in conf:
         i = 0
-        new_name = conf['output_name'] + "_" + str(i)
-        while new_name in files:
-            i += 1
-            new_name = conf['output_name'] + "_" + str(i)
-        conf['output_name'] = new_name
+        vids = [run_pipeline(trial, vid) for trial in conf["trials"]]
+        write_vid(vids, conf["output_name"], conf)
+    else:
+        vid = run_pipeline(conf["pipeline"], vid)
+        write_vid([vid], conf["output_name"], conf)
 
-    save_folder = os.path.join("videos", conf['output_name'])
-    os.mkdir(save_folder)
-    util.write_video(vid, conf['output_name']+".mp4", save_folder)
-    yaml_file = open(os.path.join(save_folder, "config.yaml"), 'w')
-    yaml.dump(conf, yaml_file)
 
 
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config", help="path to config file")    
-                    
+    parser.add_argument("-c", "--config", help="path to config file")
+
+    parser.add_argument("-i", "--input",        help="path to image folder")
+    parser.add_argument("-f", "--flat",         help="path to flat folder")
+    parser.add_argument("-o", "--output",       help="output name")
+    parser.add_argument("-b", "--begin",        help="image index to begin at")
+    parser.add_argument("-n", "--num_images",   help="number of images to read")
+    parser.add_argument("-s", "--stride",       help="stride for images")
     args = parser.parse_args()
 
     with open(args.config, "r") as yamlfile:
         data = yaml.load(yamlfile, Loader=yaml.FullLoader)
-    
+
+
+    if (args.input):
+        data["image_folder"] = args.input
+    if (args.flat):
+        data["flat_folder"] = args.flat
+    if (args.output):
+        data["output_name"] = args.output
+    if (args.begin):
+        data["vid_start_index"] = int(args.begin)
+    if (args.num_images):
+        data["num_images"] = int(args.num_images)
+    if (args.stride):
+        data["video_stride"] = int(args.stride)
+
     main(data)

@@ -14,7 +14,7 @@ import cv2 as cv2
 from scipy import ndimage
 from PIL import Image, ImageFilter, ImageEnhance
 from tqdm import tqdm
-
+import bm3d
 
 #Utility Methods
 def get_vid(src, init, nframes, step=1, crop=((0,-1), (0,-1))):
@@ -137,6 +137,18 @@ def process_video(vid, func, *args, **kwargs):
         # ret_vid = np.append(ret_vid, to_add, axis=0)
     return ret_vid
 
+def block_match(img, sigma_psd=30/255, stage_arg=bm3d.BM3DStages.HARD_THRESHOLDING):
+    ret_img = bm3d.bm3d(img, sigma_psd=sigma_psd, stage_arg=stage_arg)
+    return ret_img
+
+def gauss_diff(img, blur_1, blur_2, mix_coef):
+    b1 = np.copy(img)
+    b2 = np.copy(img)
+
+    b1 = blur(b1, blur_1)
+    b2 = blur(b2, blur_2)
+
+    return (1 - mix_coef) * b1 - mix_coef * b2
 
 
 #Processing Methods for individual images
@@ -307,6 +319,7 @@ def laplacian(vid, type=cv2.CV_64F):
      return process_video(vid, cv2.Laplacian, type)
 
 #functions for video (array of images)
+
 def mean_divide_single_frame(vid, image, index, n_frames):
     mean = get_mean(vid, index, n_frames).astype(image.dtype)
     return image / mean
@@ -322,6 +335,16 @@ def std_divide_video(vid, n_frames):
 
 def mean_divide_video(vid, n_frames):
     return np.array([mean_divide_single_frame(vid, vid[i], i, n_frames) for i in range(len(vid) - n_frames)])
+
+def mean_divide_video_bidir(vid, n_frames_f, n_frames_b):
+    ret_vid = []
+    dtype = vid[0].dtype
+    for i in range(n_frames_b-1, len(vid) - n_frames_b):
+        frame_f = get_mean(vid, i, n_frames_f).astype(dtype)
+        frame_b = get_mean(vid, i - n_frames_b + 1, n_frames_b).astype(dtype)
+        ret_vid.append(frame_f / frame_b)
+    return np.array(ret_vid)
+
 
 def mix_videos(vid_a, vid_b, mix_coef):
     print(vid_b.shape)
