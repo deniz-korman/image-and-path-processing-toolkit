@@ -21,6 +21,8 @@ def get_vid(src, init, nframes, step=1, crop=((0,-1), (0,-1))):
     files = os.listdir(src)
     files.sort()
     vid = []
+    print(src)
+    print(len(files))
     for i in tqdm(range(init, init + nframes, step)):
         img = plt.imread(os.path.join(src, files[i]))
         img = img[crop[0][0]:crop[0][1], crop[1][0]:crop[1][1]]

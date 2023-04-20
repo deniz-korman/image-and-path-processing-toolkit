@@ -3,6 +3,7 @@ import yaml
 import argparse
 import os
 import numpy as np
+from datetime import datetime
 
 single_funcs = [
     "cv_denoise",
@@ -66,7 +67,7 @@ def main(conf):
         flat_path = None
     print(f"Number of files in designated path: {len(util.os.listdir(src))}")
 
-    if ("crop" in conf.keys()):
+    if ("crop" in conf.keys() and conf["crop"] is not None):
         crop = conf["crop"]
     else:
         crop = ((0,-1), (0,-1))
@@ -91,26 +92,7 @@ def main(conf):
         vid = run_pipeline(conf["pipeline"], vid)
         write_vid([vid], conf["output_name"], conf)
 
-
-
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config", help="path to config file")
-
-    parser.add_argument("-i", "--input",        help="path to image folder")
-    parser.add_argument("-f", "--flat",         help="path to flat folder")
-    parser.add_argument("-o", "--output",       help="output name")
-    parser.add_argument("-b", "--begin",        help="image index to begin at")
-    parser.add_argument("-n", "--num_images",   help="number of images to read")
-    parser.add_argument("-s", "--stride",       help="stride for images")
-    args = parser.parse_args()
-
-    with open(args.config, "r") as yamlfile:
-        data = yaml.load(yamlfile, Loader=yaml.FullLoader)
-
-
+def apply_cmd_args(args, data):
     if (args.input):
         data["image_folder"] = args.input
     if (args.flat):
@@ -123,5 +105,75 @@ if __name__ == "__main__":
         data["num_images"] = int(args.num_images)
     if (args.stride):
         data["video_stride"] = int(args.stride)
+    if (args.crop == "0"):
+        data["crop"] = None
+    if (args.no_flat):
+        data["flat_folder"] = None
+    return data
 
-    main(data)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--config", help="path to config file")
+
+    parser.add_argument("-i", "--input",        help="path to image folder")
+    parser.add_argument("-f", "--flat",         help="path to flat folder")
+    parser.add_argument("-o", "--output",       help="output name")
+    parser.add_argument("-b", "--begin",        help="image index to begin at")
+    parser.add_argument("-n", "--num_images",   help="number of images to read")
+    parser.add_argument("-s", "--stride",       help="stride for images")
+    parser.add_argument("-cr", "--crop",        help="if cropping should be used, 0 for no 1 for yes (defaults to yes)")
+    parser.add_argument("-r", "--recursive",    help="add this flag for the pipeline to be run on all subfolders of image_folder (for instance if you have multiple videos to run at once)", action='store_true')
+    parser.add_argument("-nf", "--no_flat",     help="add this flag to remove the flat file usage, useful for running on various videos of different spiders", action='store_true')
+    args = parser.parse_args()
+    print(args)
+    videos = []
+
+
+    if (args.recursive and not args.config):
+        print("You cannot use recursive mode with multiple configs, please either specify an input video or config file")
+
+    if (not args.recursive and args.config):
+        with open(args.config, "r") as yamlfile:
+            data = yaml.load(yamlfile, Loader=yaml.FullLoader)
+        
+        data = apply_cmd_args(args, data)
+        main(data)
+
+    elif (args.recursive):
+        with open(args.config, "r") as yamlfile:
+            data = yaml.load(yamlfile, Loader=yaml.FullLoader)
+        
+        data = apply_cmd_args(args, data)
+        folders = [path for path in os.listdir(data["image_folder"]) if os.path.isdir(os.path.join(data["image_folder"], path))]
+        data_root = data["image_folder"]
+        folder_name = datetime.now().strftime("%Y_%m_%d-%I_%M_%S")
+        output_folder = os.path.join("videos", folder_name)
+
+        os.mkdir(output_folder)
+        base_name = data["output_name"]
+        for folder in folders:
+            data["image_folder"] = os.path.join(data_root, folder)
+            data["output_name"] = f'{base_name}_{folder}_output'
+            print(folder_name)
+            print(data["output_name"])
+            print(output_folder)
+            main(data)
+
+
+    elif(not args.recursive and not args.config):
+        answer = input("No config file provided, would you like to run all config files on your input (y/n): ")
+        if "y" in answer.lower():
+            configs = os.listdir("configs")
+            n = len(configs)
+            i = 0
+            for config in configs:
+                i += 1
+                print(f'Running config {i}/{n} named: {config}')
+                with open(os.path.join("configs", config), "r") as yamlfile:
+                    data = yaml.load(yamlfile, Loader=yaml.FullLoader)
+                    data = apply_cmd_args(args, data)
+                    data["output_name"] = config[:-5]
+                main(data)
+    else:
+        print("Please provide either a config file with -c or an input folder with -i")
