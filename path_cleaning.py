@@ -106,16 +106,9 @@ def main(conf):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", help="path to config file")
-
     parser.add_argument("-i", "--input",        help="path to image folder")
-    # parser.add_argument("-f", "--flat",         help="path to flat folder")
     parser.add_argument("-o", "--output",       help="output name")
-    # parser.add_argument("-b", "--begin",        help="image index to begin at")
-    # parser.add_argument("-n", "--num_images",   help="number of images to read")
-    # parser.add_argument("-s", "--stride",       help="stride for images")
-    # parser.add_argument("-cr", "--crop",        help="if cropping should be used, 0 for no 1 for yes (defaults to yes)")
-    # parser.add_argument("-r", "--recursive",    help="add this flag for the pipeline to be run on all subfolders of image_folder (for instance if you have multiple videos to run at once)", action='store_true')
-    # parser.add_argument("-nf", "--no_flat",     help="add this flag to remove the flat file usage, useful for running on various videos of different spiders", action='store_true')
+
     args = parser.parse_args()
     with open(args.config, "r") as yamlfile:
         data = yaml.load(yamlfile, Loader=yaml.FullLoader)        

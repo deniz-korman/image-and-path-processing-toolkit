@@ -76,6 +76,7 @@ def get_all_files(path):
     for folder in folders:
         files+=get_all_files(folder)
     return files
+    
 def merge_folders(path, target=None):
     if (target == None):
         target = path
