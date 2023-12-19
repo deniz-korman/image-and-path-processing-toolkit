@@ -38,10 +38,14 @@ pipeline:
       kwargs: {},
     },
     {
+    #This is a good example of using all optional arguements for shape matching
       name: shape_filter,
+      # these are the weights of the sides and angles loss values
       params: [0.00001, 0.1,],
       kwargs: {
+          #name of the objective function to use, if this is not provided then it defaults to standard shape matching
           "objective": "linear_pit_objective_function",
+          # a reference point so we know what a "good shape" is
           "base_pt": [
            [190.2, 453.5],
            [325.7, 574.2],
@@ -49,7 +53,9 @@ pipeline:
            [599.0, 275.5],
            [300.8, 288.1]
            ],
+           # weights of all the side distances values, reference the image in the README to know what each value aligns with
            "side_weights": [1, 0, 1, 0, 1,],
+           # Very similar to above but slightly different. instead of index 0 being the distance from "pit" to "top corner", angle_weights[0] is the angle between bot_corner -> pit -> top_corner. So to allow the pit to move more I have lowered the weights for angles that include the pit and for sides that include the pit.
            "angle_weights": [0.1, 0.1, 1, 1, 0.1,]
       },
     },
