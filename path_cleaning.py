@@ -22,10 +22,7 @@ def gather_data_paths(folder):
 
 
 def extract_points(data_files, points):
-    subs = [[] for _ in points]
-
-    print(subs)
-    
+    subs = [[] for _ in points]    
     for dfile in data_files:
         # Load the data
         df = pd.read_hdf(dfile)

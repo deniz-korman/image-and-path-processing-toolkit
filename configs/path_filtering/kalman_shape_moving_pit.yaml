@@ -1,0 +1,56 @@
+# File Paths
+base_video_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\dlc_proj\\Habro1_gap45_gain20-jmich-2023-09-18\\videos\\"
+output_name: "simple_kalman.mp4"
+
+ideal_pts: [[190.2, 453.5],
+       [325.7, 574.2],
+       [631.2, 537.4],
+       [599.0, 275.5],
+       [300.8, 288.1]]
+
+points : [
+    "pit",
+    "top_corner",
+    "top_waist",
+    "bot_waist",
+    "bot_corner",
+]
+
+# Pipeline Stages
+pipeline:
+  [
+    {
+      name: from_fixed_filter,
+      params: [675, 525, [800, 350]],
+      kwargs: {},
+      targets: ["pit"],
+      linker: "lerp",
+    },
+    {
+      name: conf_filter,
+      params: [0.9],
+      kwargs: {},
+      linker: "lerp",
+    },
+    {
+      name: kalman_filter_2d,
+      params: [1000, 10],
+      kwargs: {},
+    },
+    {
+      name: shape_filter,
+      params: [0.00001, 0.1,],
+      kwargs: {
+          "objective": "linear_pit_objective_function",
+          "base_pt": [
+           [190.2, 453.5],
+           [325.7, 574.2],
+           [631.2, 537.4],
+           [599.0, 275.5],
+           [300.8, 288.1]
+           ],
+           "side_weights": [1, 0, 1, 0, 1,],
+           "angle_weights": [0.1, 0.1, 1, 1, 0.1,]
+      },
+    },
+  ]

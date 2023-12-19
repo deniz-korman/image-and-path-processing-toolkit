@@ -295,6 +295,12 @@ def shape_objective_function(x, expected_distances, expected_angles, dist_coef =
         side_weights /= np.sum(side_weights) 
         side_weights *= side_weights.shape[0]
 
+    if angle_weights == None:
+        angle_weights = np.ones(n_points)
+    else:
+        angle_weights /= np.sum(angle_weights) 
+        angle_weights *= angle_weights.shape[0]
+
     distances = calculate_edge_lengths(coords)
     distance_penalties = distances - expected_distances
     distance_penalties *= side_weights
@@ -312,20 +318,80 @@ def shape_objective_function(x, expected_distances, expected_angles, dist_coef =
 
         angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))        
         # Calculate angle penalty
-        angle_penalties += ((angle - expected_angles[i])**2)
+        angle_dif = angle - expected_angles[i]
+        angle_dif *= angle_weights[i]
+        angle_penalties += ((angle_dif)**2)
+        
     # Sum of squared penalties
     penalties = distance_penalties * dist_coef + angle_penalties * angle_coef
     return penalties
-    
+
+def linear_pit_objective_function(x, expected_distances, expected_angles, dist_coef = 1, angle_coef = 1, side_weights = None, angle_weights = None):
+    coords = x.reshape((-1, 2))
+    n_points = coords.shape[0]
+    if side_weights == None:
+        side_weights = np.ones(n_points)
+    else:
+        side_weights /= np.sum(side_weights) 
+        side_weights *= side_weights.shape[0]
+
+    if angle_weights == None:
+        angle_weights = np.ones(n_points)
+    else:
+        angle_weights /= np.sum(angle_weights) 
+        angle_weights *= angle_weights.shape[0]
+
+    distances = calculate_edge_lengths(coords)    
+    distance_penalties = distances - expected_distances
+    distance_penalties[0] = distance_penalties[-1] = 0
+
+    distance_penalties *= side_weights
+    distance_penalties = np.sum(distance_penalties**2)
+    angle_penalties = 0
+
+
+    waist_midpoint = (coords[2] + coords[3]) / 2
+
+    shoulder_midpoint = (coords[1] + coords[4]) / 2
+
+    d = np.linalg.norm(np.cross(waist_midpoint-shoulder_midpoint, shoulder_midpoint-coords[0]))/np.linalg.norm(waist_midpoint-shoulder_midpoint)
+    distance_penalties += d
+    for i in range(1, len(coords)):
+        p1 = coords[i]
+        p2 = coords[(i + 1) % n_points]  # Wrap around using modulo
+        p3 = coords[(i - 1 ) % n_points]  # Wrap around using modulo
+        # Calculate the vectors from p2 to p1 and from p2 to p3
+        v1 = p2 - p1
+        v2 = p3 - p1
+
+        angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))        
+        # Calculate angle penalty
+        angle_dif = angle - expected_angles[i]
+        angle_dif *= angle_weights[i]
+        angle_penalties += ((angle_dif)**2)
+    # Sum of squared penalties
+    penalties = distance_penalties * dist_coef + angle_penalties * angle_coef
+    return penalties
+
     
 # Define an optimization function for each frame
-def optimize_frame(frame_points, expected_distances, expected_angles, coefs, side_weights = None):
+def optimize_frame(objective_func, frame_points, expected_distances, expected_angles, coefs, side_weights = None, angle_weights = None):
     # Flatten the array of points
     # x0 = frame_points.flatten()
     conf = frame_points[:, 2]
     x0 = frame_points[:, :2]
     # Minimize the objective function
-    result = minimize(shape_objective_function, x0, args=(expected_distances, expected_angles, coefs[0], coefs[1], side_weights), method='SLSQP')
+    result = minimize(
+        objective_func, 
+        x0, 
+        args=(
+            expected_distances, 
+            expected_angles, 
+            coefs[0], 
+            coefs[1], 
+            side_weights, 
+            angle_weights),
+        method='SLSQP')
 
     optimized_points = result.x.reshape(x0.shape)
 
@@ -335,7 +401,7 @@ def optimize_frame(frame_points, expected_distances, expected_angles, coefs, sid
     # Reshape the result to the original shape
     return optimized_points
 
-def shape_filter(path, dist_coef = 1, angle_coef = 1, base_pt = None, side_weights = None):
+def shape_filter(path, dist_coef = 1, angle_coef = 1, base_pt = None, side_weights = None, angle_weights = None, objective = None):
     if base_pt is None:
         base_pt = np.array(
             [[190.25768647, 453.522568],
@@ -346,6 +412,11 @@ def shape_filter(path, dist_coef = 1, angle_coef = 1, base_pt = None, side_weigh
         )
     else:
         base_pt = np.array(base_pt)
+    if objective is None:
+        objective_func = shape_objective_function
+    else:
+        objective_func = globals()[objective]
+
         
     expected_distances = calculate_edge_lengths(base_pt)
     expected_angles = calculate_angles(base_pt)
@@ -355,11 +426,13 @@ def shape_filter(path, dist_coef = 1, angle_coef = 1, base_pt = None, side_weigh
     for frame_points in tqdm(path.transpose(1,0,2)):
         
         optimized_points = optimize_frame(
+            objective_func,
             frame_points, 
             expected_distances, 
             expected_angles, 
             coefs = (dist_coef, angle_coef),
-            side_weights = side_weights
+            side_weights = side_weights,
+            angle_weights = angle_weights,
         )
         optimized_points_list.append(optimized_points)
         j += 1
