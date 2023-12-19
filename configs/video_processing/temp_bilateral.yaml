@@ -8,10 +8,11 @@ vid_start_index: 1000
 num_images: 400
 video_stride: 2
 convert_to_gray: False
-crop: [
-  [500,-1],
-  [800,-1]
-]
+all_batches: True
+# crop: [
+#   [500,-1],
+#   [800,-1]
+# ]
 
 # Pipeline Stages
 pipeline:

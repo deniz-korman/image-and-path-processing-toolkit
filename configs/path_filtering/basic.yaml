@@ -2,12 +2,11 @@
 base_video_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\dlc_proj\\Habro1_gap45_gain20-jmich-2023-09-18\\videos\\"
 output_name: "simple_kalman.mp4"
 
-ideal_pts: [[190.25768647, 453.522568],
-       [325.70858745, 574.28230165],
-       [631.20260825, 537.41828323],
-       [599.03480258, 275.56768098],
-       [300.85975782, 288.11255928]]
-
+ideal_pts: [[190.2, 453.5],
+       [325.7, 574.2],
+       [631.2, 537.4],
+       [599.0, 275.5],
+       [300.8, 288.1]]
 points : [
     "pit",
     "top_corner",

@@ -9,6 +9,7 @@ from tqdm import tqdm
 import math
 from scipy.spatial.distance import pdist, squareform
 from scipy.optimize import minimize
+from scipy.spatial.distance import euclidean
 
 colors = [
     np.array((255, 0, 0)),      # Red
@@ -212,7 +213,19 @@ def get_fix_regions(masks, min_size=5):
             i += 1
         all_regions.append(regions)
     return all_regions
-
+def calculate_edge_lengths(points):
+    """
+    Calculate the edge lengths of a polygon formed by connecting the points in order.
+    Includes the edge connecting the last point back to the first.
+    """
+    n_points = len(points)
+    edge_lengths = []
+    for i in range(n_points):
+        # Calculate distance from current point to the next, wrapping around at the end
+        edge_length = euclidean(points[i], points[(i + 1) % n_points])
+        edge_lengths.append(edge_length)
+    return np.array(edge_lengths)
+    
 def calculate_angles(reference_points):
     """
     Calculate all the angles formed by each triplet of points in the reference points array.
@@ -241,57 +254,88 @@ def calculate_angles(reference_points):
         angles.append(angle)
     
     return np.array(angles)
-    
-# Define the objective function
-def shape_objective_function(x, expected_distances, expected_angles, dist_coef = 1, angle_coef = 1):
-    # x is a flattened array of coordinates for the current frame's points
-    # Reshape x to a 2xN array for calculation
-    coords = x.reshape((5, -1))
-    # print("coords: ", coords)
-    # # Calculate the current distances
-    distances = pdist(coords)
-    # print("dist: ", distances)
-    # Calculate distance penalties
-    distance_penalties = np.sum((distances - expected_distances)**2)
-    
-    # Calculate the angles for each triplet of points and their penalties
-    angle_penalties = 0
-    for i in range(len(coords)):
-        # Calculate angle using dot product
-        n_points = 5
-        # vec1 = coords.T[(i + 1 ) % n_points] - coords.T[i]
-        # vec2 = coords.T[(i - 1 ) % n_points] - coords.T[i]
-        # dot_prod = np.dot(vec1, vec2)
-        # norm_prod = np.linalg.norm(vec1) * np.linalg.norm(vec2)
 
+def shape_objective_function_linear_pit(x, expected_distances, expected_angles, dist_coef = 1, angle_coef = 1, side_weights = None):
+    coords = x.reshape((-1, 2))
+    n_points = coords.shape[0]
+    if side_weights == None:
+        side_weights = np.ones(n_points)
+    else:
+        side_weights /= np.sum(side_weights) 
+        side_weights *= side_weights.shape[0]
+
+    distances = calculate_edge_lengths(coords)
+    distance_penalties = distances - expected_distances
+    distance_penalties *= side_weights
+    distance_penalties = np.sum(distance_penalties**2)
+    angle_penalties = 0
+
+    
+    for i in range(len(coords)):
         p1 = coords[i]
         p2 = coords[(i + 1) % n_points]  # Wrap around using modulo
         p3 = coords[(i - 1 ) % n_points]  # Wrap around using modulo
-        
         # Calculate the vectors from p2 to p1 and from p2 to p3
         v1 = p2 - p1
         v2 = p3 - p1
 
-        angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
-        # print(i, ": ", angle)
-        
+        angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))        
         # Calculate angle penalty
         angle_penalties += ((angle - expected_angles[i])**2)
     # Sum of squared penalties
     penalties = distance_penalties * dist_coef + angle_penalties * angle_coef
     return penalties
     
+def shape_objective_function(x, expected_distances, expected_angles, dist_coef = 1, angle_coef = 1, side_weights = None):
+    coords = x.reshape((-1, 2))
+    n_points = coords.shape[0]
+    if side_weights == None:
+        side_weights = np.ones(n_points)
+    else:
+        side_weights /= np.sum(side_weights) 
+        side_weights *= side_weights.shape[0]
+
+    distances = calculate_edge_lengths(coords)
+    distance_penalties = distances - expected_distances
+    distance_penalties *= side_weights
+    distance_penalties = np.sum(distance_penalties**2)
+    angle_penalties = 0
+
+    
+    for i in range(len(coords)):
+        p1 = coords[i]
+        p2 = coords[(i + 1) % n_points]  # Wrap around using modulo
+        p3 = coords[(i - 1 ) % n_points]  # Wrap around using modulo
+        # Calculate the vectors from p2 to p1 and from p2 to p3
+        v1 = p2 - p1
+        v2 = p3 - p1
+
+        angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))        
+        # Calculate angle penalty
+        angle_penalties += ((angle - expected_angles[i])**2)
+    # Sum of squared penalties
+    penalties = distance_penalties * dist_coef + angle_penalties * angle_coef
+    return penalties
+    
+    
 # Define an optimization function for each frame
-def optimize_frame(frame_points, expected_distances, expected_angles, coefs):
+def optimize_frame(frame_points, expected_distances, expected_angles, coefs, side_weights = None):
     # Flatten the array of points
-    x0 = frame_points.flatten()
+    # x0 = frame_points.flatten()
+    conf = frame_points[:, 2]
+    x0 = frame_points[:, :2]
     # Minimize the objective function
-    result = minimize(shape_objective_function, x0, args=(expected_distances, expected_angles, coefs[0], coefs[1]), method='SLSQP')
+    result = minimize(shape_objective_function, x0, args=(expected_distances, expected_angles, coefs[0], coefs[1], side_weights), method='SLSQP')
+
+    optimized_points = result.x.reshape(x0.shape)
+
+    # Merging the points and confidences into one array
+    optimized_points = np.column_stack((optimized_points, conf))
+    
     # Reshape the result to the original shape
-    optimized_points = result.x.reshape(frame_points.shape)
     return optimized_points
 
-def shape_filter(path, dist_coef = 1, angle_coef = 1, base_pt = None):
+def shape_filter(path, dist_coef = 1, angle_coef = 1, base_pt = None, side_weights = None):
     if base_pt is None:
         base_pt = np.array(
             [[190.25768647, 453.522568],
@@ -303,7 +347,7 @@ def shape_filter(path, dist_coef = 1, angle_coef = 1, base_pt = None):
     else:
         base_pt = np.array(base_pt)
         
-    expected_distances = pdist(base_pt)
+    expected_distances = calculate_edge_lengths(base_pt)
     expected_angles = calculate_angles(base_pt)
     
     optimized_points_list = []
@@ -314,7 +358,8 @@ def shape_filter(path, dist_coef = 1, angle_coef = 1, base_pt = None):
             frame_points, 
             expected_distances, 
             expected_angles, 
-            coefs = (dist_coef, angle_coef)
+            coefs = (dist_coef, angle_coef),
+            side_weights = side_weights
         )
         optimized_points_list.append(optimized_points)
         j += 1
@@ -360,7 +405,9 @@ def jump_filter_sophistic(all_tracks, threshold=5):
 def from_fixed_filter(track, dmax=675, dmin=525, center=None):
     if center is None:
         center = np.array([800, 350])
-    mask = track - center
+    else:
+        center = np.array(center)
+    mask = track[:, :, :2] - center
     mask = np.linalg.norm(mask, axis=1)
     mask = (mask > dmin) & (mask < dmax)
     return mask

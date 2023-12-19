@@ -20,15 +20,10 @@ points : [
 pipeline:
   [
     {
-    #Name of method
       name: from_fixed_filter,
-      # positional arguments
       params: [675, 525, [800, 350]],
-      # keyword arguments
       kwargs: {},
-      # this is to say "I only want this stage run on the pit", you can include any number of points here
       targets: ["pit"],
-      # the method used to link the regions that are invalid. In this case it will linearly interpolate between the last and first valid points to fill in the gap
       linker: "lerp",
     },
     {
@@ -41,5 +36,19 @@ pipeline:
       name: kalman_filter_2d,
       params: [1000, 10],
       kwargs: {},
+    },
+    {
+      name: shape_filter,
+      params: [0.00001, 0.1],
+      kwargs: {
+          "base_pt": [
+           [190.2, 453.5],
+           [325.7, 574.2],
+           [631.2, 537.4],
+           [599.0, 275.5],
+           [300.8, 288.1]
+           ],
+           "side_weights": [1, 0, 1, 0, 1,]
+      },
     },
   ]

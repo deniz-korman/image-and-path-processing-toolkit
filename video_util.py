@@ -15,11 +15,14 @@ from scipy import ndimage
 from PIL import Image, ImageFilter, ImageEnhance
 from tqdm import tqdm
 import bm3d
+import re  # Regular expression library
 
 #Utility Methods
 def get_vid(src, init, nframes, step=1, crop=((0,-1), (0,-1))):
     files = os.listdir(src)
-    files.sort()
+    # Extract the integer part from the filename and sort based on that
+    files.sort(key=lambda f: int(re.search(r'\d+', f).group()))
+
     vid = []
     print(src)
     print(len(files))
@@ -129,7 +132,9 @@ def exp(vid, factor):
     return vid ** factor
 
 def write_video(vid, name, folder="videos"):
-    skvideo.io.vwrite(os.path.join(folder, name), vid)
+    full_path = os.path.join(folder, name)
+    print(full_path)
+    skvideo.io.vwrite(full_path, vid)
 
 def process_video(vid, func, *args, **kwargs):
     frame_shape = np.array(func(vid[0], *args, **kwargs)).shape
