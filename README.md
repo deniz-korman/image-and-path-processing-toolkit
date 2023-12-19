@@ -339,20 +339,26 @@ these methods take sets of invalid regions, defined as a list tuples where each 
 
 #### Shape Matching Methods
 
-3. **calculate_angles(reference_points)**:
+The shape match method allows for weighting the edges to allow for more deviation in certain axis than others. For the basic example this is how the distances are calculated, green numbers indicate the index of this edge in the distance list.
+
+![image info](./imgs/points.png)
+
+Then to specify edge weights you must provide edge_weight in the config file as is shown in `kalman_with_shape.yaml`. The values in the edge_weights line up with the green numbers in this figure, so if you would like to allow the eye tube to contract you would want to shrink values `1` and `3`. An important note, the weights are normalized to not change the overall loss. As in if you were to set the weights to `[2, 2, 2, 2, 2]` it would not double the strength of the shape matching. The values are only important relative to each other. 
+
+1. **calculate_angles(reference_points)**:
    - Calculates angles formed by triplets of points in a set of reference points.
    - Useful for getting a ground truth shape (done automatically)
 
-4. **shape_objective_function(x, expected_distances, expected_angles, dist_coef=1, angle_coef=1)**:
+2. **shape_objective_function(x, expected_distances, expected_angles, dist_coef=1, angle_coef=1)**:
    - An objective function for shape optimization, focusing on distances and angles.
    - Used in optimizing the shape of tracks based on expected geometrical properties.
    - This method can be replaced or changed to affect how the shape matching behaves
 
-5. **optimize_frame(frame_points, expected_distances, expected_angles, coefs)**:
+3. **optimize_frame(frame_points, expected_distances, expected_angles, coefs)**:
    - Optimizes the shape of a single frame's points based on expected distances and angles.
    - This method is handled by `shape_filter` but for context this is what actually optimizes a frame based on shape
 
-6. **shape_filter(path, dist_coef=1, angle_coef=1, base_pt=None)**:
+4. **shape_filter(path, dist_coef=1, angle_coef=1, base_pt=None)**:
    - Filters and optimizes the shape of an entire path of tracked points.
    - Ensures the path adheres to expected geometrical constraints.
    - this method matches the shape of 5 points in each frame to a `base_pt` which is a list of 2D pixel coordinates of your shape in clockwise order.
