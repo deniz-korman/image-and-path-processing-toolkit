@@ -14,9 +14,9 @@ req_link_funcs = [
 
 
 def gather_data_paths(folder):
-    tracked_vids = [os.path.join(folder, f) for f in os.listdir(folder) if "_filtered_labeled" in f][3:5]
-    raw_vids = [os.path.join(folder, f) for f in os.listdir(folder) if "labeled" not in f and ".mp4" in f][3:5]
-    data_files = [os.path.join(folder, f) for f in os.listdir(folder) if "_filtered.h5" in f][3:5]
+    tracked_vids = [os.path.join(folder, f) for f in os.listdir(folder) if "_filtered_labeled" in f]
+    raw_vids = [os.path.join(folder, f) for f in os.listdir(folder) if "labeled" not in f and ".mp4" in f]
+    data_files = [os.path.join(folder, f) for f in os.listdir(folder) if "_filtered.h5" in f]
 
     return data_files, raw_vids, tracked_vids
 
