@@ -131,6 +131,11 @@ def make_video_set(videos, tracks, name = "video.mp4"):
                 cap.release()
     
     # Release everything
+
+    track_data = np.array(tracks)
+    
+    np.savetxt('track_data.csv', track_data, delimiter=',')
+    
     cap.release()
     out.release()
 

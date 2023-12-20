@@ -17,6 +17,21 @@ from tqdm import tqdm
 import bm3d
 import re  # Regular expression library
 
+def pad_ndarray(arr):
+    # Extract the shape of the array
+    frames, x, y = arr.shape
+
+    # Calculate the padding needed
+    pad_x = x % 2
+    pad_y = y % 2
+
+    # Pad the array if necessary
+    if pad_x or pad_y:
+        padding = ((0, 0), (0, pad_x), (0, pad_y))  # No padding for frames, pad x and y if needed
+        arr = np.pad(arr, padding, mode='constant', constant_values=0)
+
+    return arr
+    
 #Utility Methods
 def get_vid(src, init, nframes, step=1, crop=((0,-1), (0,-1))):
     files = os.listdir(src)
@@ -24,8 +39,8 @@ def get_vid(src, init, nframes, step=1, crop=((0,-1), (0,-1))):
     files.sort(key=lambda f: int(re.search(r'\d+', f).group()))
 
     vid = []
-    print(src)
-    print(len(files))
+    print("From: ", src)
+    print("Num Files: ", len(files))
     for i in tqdm(range(init, init + nframes, step)):
         img = plt.imread(os.path.join(src, files[i]))
         img = img[crop[0][0]:crop[0][1], crop[1][0]:crop[1][1]]
@@ -133,7 +148,6 @@ def exp(vid, factor):
 
 def write_video(vid, name, folder="videos"):
     full_path = os.path.join(folder, name)
-    print(full_path)
     skvideo.io.vwrite(full_path, vid)
 
 def process_video(vid, func, *args, **kwargs):
@@ -355,8 +369,6 @@ def mean_divide_video_bidir(vid, n_frames_f, n_frames_b):
 
 
 def mix_videos(vid_a, vid_b, mix_coef):
-    print(vid_b.shape)
-    print(vid_a.shape)
     vid_b = vid_b[:len(vid_a)]
     vid_scale = vid_a.mean() / vid_b.mean()
     vid_b = vid_b * vid_scale

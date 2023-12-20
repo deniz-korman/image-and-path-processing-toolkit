@@ -38,25 +38,26 @@ def run_pipeline(pipeline, video):
 
 def write_vid(vids, name, conf):
     name = name.replace(" ", "")
-    print("Writing video to: videos/", name)
+    print("Writing video to: ", name)
 
-    files = os.listdir("videos")
-    if name in files:
+    os.makedirs(name, exist_ok = True)
+    files = os.listdir(name)
+
+    vid_name = "vid_0.mp4"
+    
+    if vid_name in files:
         i = 0
-        new_name = name + "_" + str(i)
-        while new_name in files:
+        vid_name = "vid_" + str(i) + ".mp4"
+        while vid_name in files:
             i += 1
-            new_name = name + "_" + str(i)
-        name = new_name
+            vid_name = "vid_" + str(i) + ".mp4"
 
-    save_folder = os.path.join("videos", name)
-    os.makedirs(save_folder)
-    i = 0
+    save_folder = name
+
     vids = np.array(vids)
     for vid in vids:
-        vid_path = str(i) + "_" + name+".mp4"
-        video_util.write_video(vid,vid_path , save_folder)
-        i+=1
+        vid = video_util.pad_ndarray(vid)
+        video_util.write_video(vid, vid_name, save_folder)
     yaml_file = open(os.path.join(save_folder, "config.yaml"), 'w')
     yaml.dump(conf, yaml_file)
 
@@ -82,6 +83,7 @@ def get_and_process_vid(path, start_index, num_images, stride, crop, conf, flat_
         write_vid(vids, conf["output_name"], conf)
     else:
         vid = run_pipeline(conf["pipeline"], vid)
+        
         write_vid([vid], conf["output_name"], conf)
     del vid
 
@@ -98,7 +100,7 @@ def main(conf):
     else:
         crop = ((0,-1), (0,-1))
 
-    if conf['all_batches']:
+    if 'all_batches' in conf.keys() and conf['all_batches']:
         start = conf["vid_start_index"]
         num = conf["num_images"]
         base_of = conf['output_name']
@@ -107,7 +109,9 @@ def main(conf):
         n_steps = n_images // num
         cur_step = 0
         while start < n_images:
-            conf['output_name'] = base_of + "_" + str(cur_step)
+            # conf['output_name'] = os.path.join(base_of, "vid_" + str(cur_step))
+            conf['output_name'] = base_of
+            
             print(f"Running step {cur_step} of {n_steps}")
             cur_step += 1
             get_and_process_vid(src, start, num, conf["video_stride"], crop, conf, flat_path)
@@ -135,6 +139,8 @@ def apply_cmd_args(args, data):
         data["crop"] = None
     if (args.no_flat):
         data["flat_folder"] = None
+    if (args.all_batches):
+        data['all_batches'] = args.all_batches
     return data
 
 
@@ -174,17 +180,12 @@ if __name__ == "__main__":
         data = apply_cmd_args(args, data)
         folders = [path for path in os.listdir(data["image_folder"]) if os.path.isdir(os.path.join(data["image_folder"], path))]
         data_root = data["image_folder"]
-        folder_name = datetime.now().strftime("%Y_%m_%d-%I_%M_%S")
-        output_folder = os.path.join("videos", folder_name)
-
-        os.mkdir(output_folder)
+        output_folder = os.path.join("videos", data['output_name'])
+        os.makedirs(output_folder, exist_ok=True)
         base_name = data["output_name"]
         for folder in folders:
             data["image_folder"] = os.path.join(data_root, folder)
-            data["output_name"] = f'{base_name}_{folder}_output'
-            print(folder_name)
-            print(data["output_name"])
-            print(output_folder)
+            data["output_name"] = os.path.join(output_folder, folder)
             main(data)
 
 

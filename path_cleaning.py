@@ -94,6 +94,8 @@ def main(conf):
 
     points = run_filter_pipeline(conf["pipeline"], points, conf["points"])
 
+    
+    
     path_util.make_video_set(raw_vids, points, conf["output_name"])
 
     print(f"Process complete and video saved at: {conf['output_name']}")
