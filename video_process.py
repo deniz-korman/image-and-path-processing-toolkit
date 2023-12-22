@@ -5,6 +5,7 @@ import os
 import numpy as np
 from datetime import datetime
 
+# list of functions that only function on a single frame at a time
 single_funcs = [
     "cv_denoise",
     "sobel_2d",
@@ -24,18 +25,23 @@ single_funcs = [
     "block_match"
 ]
 
+# this is the method to run the pipeline stages
 def run_pipeline(pipeline, video):
+    # copy video
     vid=np.copy(video)
+    # iterate over stages
     for stage in pipeline:
         print("Running stage: ", stage['name'])
         func = getattr(video_util, stage['name'])
-
+        # if we need to run the stage on each frame
         if stage['name'] in single_funcs:
             vid = video_util.process_video(vid, func, *stage["params"], **stage["kwargs"])
         else:
+            # otherwise pass the entire video to the stage
             vid = func(vid, *stage["params"], **stage["kwargs"])
     return vid
 
+# method to write videos to disk, it can handle reusing names by adding numbers to the names
 def write_vid(vids, name, conf):
     name = name.replace(" ", "")
     print("Writing video to: ", name)
@@ -44,7 +50,7 @@ def write_vid(vids, name, conf):
     files = os.listdir(name)
 
     vid_name = "vid_0.mp4"
-    
+    # if our name is taken change the integer until it isnt
     if vid_name in files:
         i = 0
         vid_name = "vid_" + str(i) + ".mp4"
@@ -63,10 +69,13 @@ def write_vid(vids, name, conf):
 
     video_util.plt.imsave(os.path.join(save_folder, "thumbnail.png"), vid[len(vid)//2])
 
+# wrapper for running the pipeline that handles data types, reading data, and multiple trials
 def get_and_process_vid(path, start_index, num_images, stride, crop, conf, flat_path):
+    # read data from disk
     vid = video_util.get_vid(path, start_index, num_images, stride, crop)
     vid = vid.astype(float) / 255.0
 
+    # get a flat if we have one (usually not needed)
     if flat_path != None:
         print("Loading Flat")
         flat = video_util.get_flat_ave(flat_path)
@@ -76,7 +85,7 @@ def get_and_process_vid(path, start_index, num_images, stride, crop, conf, flat_
     if conf["convert_to_gray"]:
         vid = video_util.process_video(vid, video_util.np.min, axis=2)
 
-
+    # if we have multiple trials then run each separatly
     if "trials" in conf:
         i = 0
         vids = [run_pipeline(trial, vid) for trial in conf["trials"]]
@@ -87,6 +96,7 @@ def get_and_process_vid(path, start_index, num_images, stride, crop, conf, flat_
         write_vid([vid], conf["output_name"], conf)
     del vid
 
+# main method to handle config data and specific data index
 def main(conf):
     src = conf["image_folder"]
     if conf["flat_folder"] != "None":
@@ -99,7 +109,7 @@ def main(conf):
         crop = conf["crop"]
     else:
         crop = ((0,-1), (0,-1))
-
+    # this is new and very helpful. If you do run with all_batches it will process any number of images in groups to not crash due to low memory. I use this to process entire spider videos at once.
     if 'all_batches' in conf.keys() and conf['all_batches']:
         start = conf["vid_start_index"]
         num = conf["num_images"]
@@ -122,6 +132,7 @@ def main(conf):
     else:
         get_and_process_vid(src, conf["vid_start_index"], conf["num_images"], conf["video_stride"], crop, conf, flat_path)
 
+# this is to apply the command line args to the config
 def apply_cmd_args(args, data):
     if (args.input):
         data["image_folder"] = args.input
@@ -147,7 +158,6 @@ def apply_cmd_args(args, data):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", help="path to config file")
-
     parser.add_argument("-i", "--input",        help="path to image folder")
     parser.add_argument("-f", "--flat",         help="path to flat folder")
     parser.add_argument("-o", "--output",       help="output name")
@@ -162,17 +172,21 @@ if __name__ == "__main__":
     print(args)
     videos = []
 
-
     if (args.recursive and not args.config):
         print("You cannot use recursive mode with multiple configs, please either specify an input video or config file")
 
+    # this is the most common path, non-recursive and with a config file
     if (not args.recursive and args.config):
+        # read data
         with open(args.config, "r") as yamlfile:
             data = yaml.load(yamlfile, Loader=yaml.FullLoader)
-        
+        # get command line args
         data = apply_cmd_args(args, data)
+        # run data
         main(data)
+        
 
+    # if you do wish to run with recursive
     elif (args.recursive):
         with open(args.config, "r") as yamlfile:
             data = yaml.load(yamlfile, Loader=yaml.FullLoader)
@@ -188,11 +202,11 @@ if __name__ == "__main__":
             data["output_name"] = os.path.join(output_folder, folder)
             main(data)
 
-
+    # edge case when you may want to run all config files on a single video
     elif(not args.recursive and not args.config):
         answer = input("No config file provided, would you like to run all config files on your input (y/n): ")
         if "y" in answer.lower():
-            configs = os.listdir("configs")
+            configs = os.listdir("configs/video_processing")
             n = len(configs)
             i = 0
             for config in configs:
