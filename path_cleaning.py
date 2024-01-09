@@ -5,7 +5,7 @@ import os
 import numpy as np
 from datetime import datetime
 import pandas as pd
-
+import csv
 # List of functions that will require a linker
 req_link_funcs = [
     "jump_filter",
@@ -112,6 +112,29 @@ def main(conf):
     # make one large video from all the sub videos
     path_util.make_video_set(raw_vids, points, conf["output_name"])
 
+    # also output the data as a CSV
+    track_data = np.array(points)
+    track_data = track_data.transpose(1, 0, 2)
+    track_data = track_data.reshape(4080, -1)
+
+    print(track_data.shape)
+    
+    # np.savetxt('track_data.csv', track_data, delimiter=',')
+    
+    # Step 2: Create headers
+    headers = []
+    for part in conf["points"]:
+        headers.extend([f'{part}_X', f'{part}_Y', f'{part}_Confidence'])
+    
+    # Your reshaped data (4080, 15) as 'reshaped_array' from previous steps
+    
+    # Step 3: Write to CSV
+    with open('track_data.csv', 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(headers)  # Write the headers
+        writer.writerows(track_data)  # Write the data
+
+    
     print(f"Process complete and video saved at: {conf['output_name']}")
 
 

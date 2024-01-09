@@ -140,9 +140,6 @@ def make_video_set(videos, tracks, name = "video.mp4"):
                 out.write(frame)  # Save the frame to the output video
             else:
                 cap.release()
-    # also output the data as a CSV
-    track_data = np.array(tracks)
-    np.savetxt('track_data.csv', track_data, delimiter=',')
     
     # Release everything
     cap.release()
