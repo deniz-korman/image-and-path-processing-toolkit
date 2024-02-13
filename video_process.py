@@ -25,8 +25,9 @@ single_funcs = [
     "block_match"
 ]
 
+
 # this is the method to run the pipeline stages
-def run_pipeline(pipeline, video):
+def run_pipeline(pipeline, video, verbose=False):
     # copy video
     vid=np.copy(video)
     # iterate over stages
@@ -39,6 +40,10 @@ def run_pipeline(pipeline, video):
         else:
             # otherwise pass the entire video to the stage
             vid = func(vid, *stage["params"], **stage["kwargs"])
+        if verbose:
+            print("MEAN: ", vid.mean())
+            print("STD: ", vid.std())
+            print(f"RANGE: {vid.min()} - {vid.max()}")
     return vid
 
 # method to write videos to disk, it can handle reusing names by adding numbers to the names
@@ -74,7 +79,7 @@ def get_and_process_vid(path, start_index, num_images, stride, crop, conf, flat_
     # read data from disk
     vid = video_util.get_vid(path, start_index, num_images, stride, crop)
     vid = vid.astype(float) / 255.0
-
+    verbose = conf['verbose']
     # get a flat if we have one (usually not needed)
     if flat_path != None:
         print("Loading Flat")
@@ -88,10 +93,10 @@ def get_and_process_vid(path, start_index, num_images, stride, crop, conf, flat_
     # if we have multiple trials then run each separatly
     if "trials" in conf:
         i = 0
-        vids = [run_pipeline(trial, vid) for trial in conf["trials"]]
+        vids = [run_pipeline(trial, vid, verbose) for trial in conf["trials"]]
         write_vid(vids, conf["output_name"], conf)
     else:
-        vid = run_pipeline(conf["pipeline"], vid)
+        vid = run_pipeline(conf["pipeline"], vid, verbose)
         
         write_vid([vid], conf["output_name"], conf)
     del vid
@@ -130,7 +135,14 @@ def main(conf):
                 num = n_images - start
 
     else:
-        get_and_process_vid(src, conf["vid_start_index"], conf["num_images"], conf["video_stride"], crop, conf, flat_path)
+        get_and_process_vid(
+            src, 
+            conf["vid_start_index"], 
+            conf["num_images"], 
+            conf["video_stride"], 
+            crop, 
+            conf, 
+            flat_path)
 
 # this is to apply the command line args to the config
 def apply_cmd_args(args, data):
@@ -152,12 +164,13 @@ def apply_cmd_args(args, data):
         data["flat_folder"] = None
     if (args.all_batches):
         data['all_batches'] = args.all_batches
+    data['verbose'] = args.verbose
     return data
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config", help="path to config file")
+    parser.add_argument("-c", "--config",       help="path to config file")
     parser.add_argument("-i", "--input",        help="path to image folder")
     parser.add_argument("-f", "--flat",         help="path to flat folder")
     parser.add_argument("-o", "--output",       help="output name")
@@ -168,6 +181,9 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--recursive",    help="add this flag for the pipeline to be run on all subfolders of image_folder (for instance if you have multiple videos to run at once)", action='store_true')
     parser.add_argument("-nf", "--no_flat",     help="add this flag to remove the flat file usage, useful for running on various videos of different spiders", action='store_true')
     parser.add_argument("-a", "--all_batches",        help="pass this flag if you want it to process all images in the folder one batch at a time", action='store_true')
+    parser.add_argument("-v", "--verbose",  help="pass this flag to have the pipeline print statistics about the video between each step. can be very useful in debugging", action='store_true')
+
+    parser.add_argument("-fa", "--fake",  help="pass this flag to have the pipeline spoof data, helps to test componenets quickly", action='store_true')
     args = parser.parse_args()
     print(args)
     videos = []
@@ -183,6 +199,7 @@ if __name__ == "__main__":
         # get command line args
         data = apply_cmd_args(args, data)
         # run data
+        print(data)
         main(data)
         
 

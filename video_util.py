@@ -123,6 +123,14 @@ def show(img, threshold=None):
         plt.imshow(img, cmap="gray", vmin=threshold[0], vmax=threshold[1])
     else:
         plt.imshow(img, cmap="gray")
+
+def summarize(vid):
+    print("===")
+    print("MEAN: ", vid.mean())
+    print("STD: ", vid.std())
+    print(f"RANGE: {vid.min()} - {vid.max()}")
+    print("===")
+    return vid
     
 # normalize a single frame to 0-1
 def frame_norm(vid):
@@ -149,6 +157,13 @@ def std_normalize(vid, stds=1):
 def normalize(vid, max_val=1):
     vid = (vid-np.min(vid))/(np.max(vid) - np.min(vid))
     return vid * max_val
+
+def adv_normalize(vid, percentile=5):
+    high = np.percentile(vid, 100 - percentile)
+    low = np.percentile(vid, percentile)
+    vid  -= low
+    vid /= (high - low)
+    return vid
 
 # multiply a vidoe by a value
 def mul(vid, coef):

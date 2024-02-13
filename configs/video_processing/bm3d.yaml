@@ -1,11 +1,11 @@
 # File Paths
 image_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\data\\images\\Habro1_gap45_gain20_1_B"
 flat_folder: "C:\\Users\\Jackson\\Documents\\northwestern\\spiders\\data\\images\\flats\\all\\Flats_and_Darks\\Flats_gap45_gain20"
-output_name: "multi_block_match_2frame_diff_gaus"
+output_name: "mean_demo"
 
 # Video Settings
 vid_start_index: 1000
-num_images: 200
+num_images: 400
 video_stride: 2
 convert_to_gray: False
 crop: [
@@ -13,11 +13,21 @@ crop: [
   [800,-1]
 ]
 
-trials: [
-    [
+# Pipeline Stages
+pipeline:
+  [
     {
+       name: summarize,
+       params: [],
+        kwargs: {}
+    },
+    {
+      # Name of method
       name: mean_divide_video,
-      params: [5],
+      # Any positional arguments (for example blur takes a argument for the size of the blur kernel)
+      params:
+        [10],
+      # keyword arguments
       kwargs: {}
     },
     {
@@ -26,14 +36,18 @@ trials: [
       kwargs: {}
     },
     {
-      name: std_normalize,
-      params: [3],
+      name: sharpen,
+      params: [],
       kwargs: {}
     },
     {
-      name: normalize,
-      params: [255],
+      name: adv_normalize,
+      params: [0],
       kwargs: {}
     },
+    {
+       name: mul,
+       params: [255],
+        kwargs: {}
+    },
   ]
-]
